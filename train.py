@@ -4,10 +4,12 @@ import time
 import shutil
 from argparse import ArgumentParser
 
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.backends.cudnn as cudnn
 import torchvision.utils as vutils
+from PIL import Image
 from tensorboardX import SummaryWriter
 
 from trainer import Trainer
@@ -42,7 +44,7 @@ def main():
         os.makedirs(checkpoint_path)
     shutil.copy(args.config, os.path.join(checkpoint_path, os.path.basename(args.config)))
     writer = SummaryWriter(logdir=checkpoint_path)
-    logger = get_logger(checkpoint_path)    # get logger and configure it at the first call
+    logger = get_logger(checkpoint_path)  # get logger and configure it at the first call
 
     logger.info("Arguments: {}".format(args))
     # Set random seed
@@ -98,20 +100,43 @@ def main():
 
         for iteration in range(start_iteration, config['niter'] + 1):
             try:
-                ground_truth = next(iterable_train_loader)
+                x, mask, bboxes, ground_truth = next(iterable_train_loader)
+                # ground_truth = next(iterable_train_loader)
             except StopIteration:
                 iterable_train_loader = iter(train_loader)
-                ground_truth = next(iterable_train_loader)
+                # ground_truth = next(iterable_train_loader)
+                x, mask, bboxes, ground_truth = next(iterable_train_loader)
 
             # Prepare the inputs
-            bboxes = random_bbox(config, batch_size=ground_truth.size(0))
-            x, mask = mask_image(ground_truth, bboxes, config)
+            # bboxes = random_bbox(config, batch_size=ground_truth.size(0))
+
+            # NOTE:
+            """
+            x = batch of masked images in [-1, 1]
+            mask = [batch, 1, 512, 512] in [0, 1] with 1 means masked
+            boxes = list of boxes [t, l, 128, 128] (ROI's area >= mask's area)
+                    current "mask_batch_same": every images in batches got same boxes
+            
+            Need to:
+            using helper to get: 
+            - x (image with Foody on it) in [-1, 1]
+            - boxes = list of box bounding Foody (with extra padding, random text's height, width // 4)
+                        size [128, 128]
+            - masks (might be dont need to be exactly 0 or 1, but have to be in [0, 1])
+                    mask == Foody / 255
+                    mask != Foody = 0
+                    MUST gen inside boxes
+                        
+            Best: edit Dataset class to return ground_truth, x, masks, boxes
+            """
+
+            # x, mask = mask_image(ground_truth, bboxes, config)
             if cuda:
                 x = x.cuda()
                 mask = mask.cuda()
                 ground_truth = ground_truth.cuda()
 
-            ###### Forward pass ######
+            # ----- Forward pass -----
             compute_g_loss = iteration % config['n_critic'] == 0
             losses, inpainted_result, offset_flow = trainer(x, bboxes, mask, ground_truth, compute_g_loss)
             # Scalars from different devices are gathered into vectors
@@ -119,12 +144,11 @@ def main():
                 if not losses[k].dim() == 0:
                     losses[k] = torch.mean(losses[k])
 
-            ###### Backward pass ######
+            # ----- Backward pass -----
             # Update D
             trainer_module.optimizer_d.zero_grad()
             losses['d'] = losses['wgan_d'] + losses['wgan_gp'] * config['wgan_gp_lambda']
-            losses['d'].backward()
-            trainer_module.optimizer_d.step()
+            losses['d'].backward(retain_graph=True)
 
             # Update G
             if compute_g_loss:
@@ -134,6 +158,8 @@ def main():
                               + losses['wgan_g'] * config['gan_loss_alpha']
                 losses['g'].backward()
                 trainer_module.optimizer_g.step()
+
+            trainer_module.optimizer_d.step()
 
             # Log and visualization
             log_losses = ['l1', 'ae', 'wgan_g', 'wgan_d', 'wgan_gp', 'g', 'd']

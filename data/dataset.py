@@ -1,10 +1,32 @@
 import sys
+
+import cv2
+import numpy as np
+import torch
 import torch.utils.data as data
 from os import listdir
+
+from PIL import Image
+
+from mask_helper import gen_mask
 from utils.tools import default_loader, is_image_file, normalize
 import os
 
 import torchvision.transforms as transforms
+
+
+class SquarePad:
+    def __init__(self, value=0):
+        self.value = value
+
+    def __call__(self, image):
+        w, h = image.size
+        max_wh = np.max([w, h])
+        lp = int((max_wh - w) / 2)
+        tp = int((max_wh - h) / 2)
+        result = Image.new(image.mode, (max_wh, max_wh), self.value)
+        result.paste(image, (lp, tp))
+        return result
 
 
 class Dataset(data.Dataset):
@@ -19,26 +41,42 @@ class Dataset(data.Dataset):
         self.random_crop = random_crop
         self.return_name = return_name
 
+        self.pad_square = SquarePad()
+        self.do_resize = transforms.Resize(512)
+
+        self.transform = transforms.Compose([
+            # Padding to max_size (512)
+            # SquarePad(),
+            transforms.CenterCrop((256, 256)),
+            transforms.ToTensor()
+        ])
+
     def __getitem__(self, index):
         path = os.path.join(self.data_path, self.samples[index])
         img = default_loader(path)
+        img = self.pad_square(img)
+        img = self.do_resize(img)
 
-        if self.random_crop:
-            imgw, imgh = img.size
-            if imgh < self.image_shape[0] or imgw < self.image_shape[1]:
-                img = transforms.Resize(min(self.image_shape))(img)
-            img = transforms.RandomCrop(self.image_shape)(img)
-        else:
-            img = transforms.Resize(self.image_shape)(img)
-            img = transforms.RandomCrop(self.image_shape)(img)
+        cv_im = np.array(img)
+        cv_im = cv2.cvtColor(cv_im, cv2.COLOR_RGB2BGR)
+        gen, mask, bbox = gen_mask(cv_im)
+        mask = mask.astype(np.float32)
+        # Center crop mask
+        mask = mask[128:128 + 256, 128:128 + 256]
+        mask = torch.from_numpy(mask).unsqueeze(0)
 
-        img = transforms.ToTensor()(img)  # turn the image to a tensor
+        img = self.transform(img)  # pad, crop & turn the image to a tensor
         img = normalize(img)
+
+        gen = cv2.cvtColor(gen, cv2.COLOR_BGR2RGB)
+        gen = Image.fromarray(gen)
+        gen = self.transform(gen)
+        gen = normalize(gen)
 
         if self.return_name:
             return self.samples[index], img
         else:
-            return img
+            return gen, mask, bbox, img
 
     def _find_samples_in_subfolders(self, dir):
         """
