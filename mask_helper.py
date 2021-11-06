@@ -28,25 +28,20 @@ def gen_mask(im_origin: np.ndarray):
         logo_s = cv2.imread("asset/mask2.png", cv2.IMREAD_UNCHANGED)
 
     # RANDOMIZE MASK
-    pixel_shift_x = np.random.randint(-3, 3)
-    pixel_shift_y = np.random.randint(-3, 3)
-    pixel_zoom_scale = np.random.randint(-3, 3)
-    pixel_smooth = np.random.randint(300, 400)
+    pixel_shift_x = np.random.randint(-25, 25)
+    pixel_shift_y = np.random.randint(-25, 25)
+    pixel_zoom_scale = np.random.randint(-15, 15)
+    pixel_smooth = np.random.randint(200, 400)
     flip_up = np.random.randint(9)
     opacity = np.random.uniform(15, 35) / 100
     # opacity=1.
 
-    center_x = 256
-    center_y = 256
-
     if flip_up % 3 != 1:
-        center_x += pixel_shift_x
         for i in range(logo_s.shape[1] - 1, pixel_shift_x, -1):
             logo_s = np.roll(logo_s, -1, axis=1)
             logo_s[:, -1] = logo_s[:, 0]
 
     if flip_up % 3 != 2:
-        center_y += pixel_shift_y
         for i in range(logo_s.shape[1] - 1, pixel_shift_y, -1):
             logo_s = np.roll(logo_s, -1, axis=0)
             logo_s[:, -1] = logo_s[:, 0]
@@ -63,30 +58,15 @@ def gen_mask(im_origin: np.ndarray):
     result[:, :, 1] = (1. - alpha) * im_origin[:, :, 1] + alpha * logo_s[:, :, 1]
     result[:, :, 2] = (1. - alpha) * im_origin[:, :, 2] + alpha * logo_s[:, :, 2]
 
-    top = max(center_y - 64, 0)
-    left = max(center_x - 64, 0)
-
-    if top + 128 >= 512:
-        height = 512 - top
-    else:
-        height = 128
-
-    if left + 128 >= 512:
-        width = 521 - left
-    else:
-        width = 128
-
-    # bbox = np.array([top, left, height, width])
-    # Fucking gix bbox to be center box of image with shape 256 x 256
-    bbox = np.array([64, 64, 128, 128])
-    return result, alpha, bbox
+    num_effective_pixel = len(np.where(alpha > 0)[0])
+    return result, num_effective_pixel
 
 
 if __name__ == '__main__':
     src = cv2.imread("asset/image.jpg")
 
     for _ in range(10):
-        res, _, box = gen_mask(src)
-        cv2.rectangle(res, (box[1], box[0]), (box[1] + box[3], box[0] + box[2]), (0, 255, 0), 2)
+        res, num_pixels = gen_mask(src)
+        print(f"num_effective_pixel: {num_pixels}")
         cv2.imshow("Result", res)
         cv2.waitKey(0)
