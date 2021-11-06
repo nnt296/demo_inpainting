@@ -83,6 +83,11 @@ class Unet(pl.LightningModule):
         # Keep track of last loss
         self.last_loss = float("inf")
 
+        train_ds = FoodDataset(img_dir=os.path.join(self.h_params.dataset, "images"),
+                               im_names_path=os.path.join(self.h_params.dataset, "meta", "meta", "train.txt"))
+        self.num_samples = len(train_ds)
+        self.train_iters_per_epoch = self.num_samples // self.h_params.batch_size
+
     def forward(self, x):
         x1 = self.inc(x)
         x2 = self.down1(x1)
@@ -125,8 +130,22 @@ class Unet(pl.LightningModule):
         return loss
 
     def configure_optimizers(self):
-        return torch.optim.Adam(
+        optimizer = torch.optim.Adam(
             self.parameters(), lr=self.h_params.learning_rate, weight_decay=self.h_params.weight_decay)
+
+        warmup_steps = self.train_iters_per_epoch * self.h_params.warmup_epochs
+        total_steps = self.train_iters_per_epoch * self.h_params.max_epochs
+
+        scheduler = {
+            "scheduler": torch.optim.lr_scheduler.LambdaLR(
+                optimizer,
+                linear_warmup_decay(warmup_steps, total_steps, cosine=True),
+            ),
+            "interval": "step",
+            "frequency": 1,
+        }
+
+        return [optimizer], [scheduler]
 
     def train_dataloader(self):
         train_ds = FoodDataset(img_dir=os.path.join(self.h_params.dataset, "images"),
@@ -169,9 +188,10 @@ class Unet(pl.LightningModule):
         parser.add_argument('--n_classes', type=int, default=3)
 
         # Training params
-        parser.add_argument('--reduction_point', type=int, default=0.05)
+        parser.add_argument('--max_epochs', type=int, default=50)
+        parser.add_argument('--warmup_epochs', type=int, default=1)
+        parser.add_argument('--reduction_point', type=float, default=0.05)
         parser.add_argument('--weight_decay', type=int, default=1e-6)
-        parser.add_argument('--max_epochs', type=int, default=100)
         parser.add_argument('--num_workers', type=int, default=4)
         parser.add_argument('--batch_size', type=int, default=4)
         parser.add_argument('--learning_rate', type=int, default=1e-4)
