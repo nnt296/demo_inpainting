@@ -1,11 +1,9 @@
 import os
-import glob
+import cv2
+import random
 
 import numpy as np
 from PIL import Image
-
-import torch
-from torch.nn import functional as F
 
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms
@@ -46,8 +44,9 @@ class FoodDataset(Dataset):
             transforms.Resize(512)
         ])
 
+        self.flip = transforms.RandomHorizontalFlip(p=1.1)
+
         self.transform = transforms.Compose([
-            transforms.RandomHorizontalFlip(),
             transforms.ToTensor(),
             transforms.Normalize(
                 mean=[0.5, 0.5, 0.5],
@@ -83,6 +82,10 @@ class FoodDataset(Dataset):
         masked_im = Image.fromarray(masked_im_np)
 
         # Training/Test transform
+        if random.uniform(0, 1) < 0.5:
+            masked_im = self.flip(masked_im)
+            img = self.flip(img)
+
         masked_im = self.transform(masked_im)
         img = self.transform(img)
 

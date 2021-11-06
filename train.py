@@ -1,6 +1,8 @@
 import os
 from argparse import ArgumentParser
 
+import torch
+
 from unet import Unet
 from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks import ModelCheckpoint, LearningRateMonitor
@@ -16,17 +18,19 @@ def main(h_params):
     callbacks = [model_checkpoint, lr_monitor]
 
     trainer = Trainer(
-        max_epochs=100,
+        max_epochs=h_params.max_epochs,
         gpus=1,
         callbacks=callbacks,
-        num_nodes=1,
-        fast_dev_run=1
+        num_nodes=1
     )
 
     trainer.fit(model)
 
 
 if __name__ == '__main__':
+    # For reproducible
+    torch.manual_seed(123)
+
     parent_parser = ArgumentParser(add_help=False)
     parent_parser.add_argument('--dataset', required=True)
     parent_parser.add_argument('--log_dir', default='lightning_logs')
