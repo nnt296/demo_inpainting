@@ -59,6 +59,8 @@ class FoodDataset(Dataset):
             lines = f.readlines()
             for line in lines:
                 line = line.strip()
+                if len(line) == 0:
+                    continue
                 image_path = os.path.join(self.img_dir, line + ".jpg")
                 self.image_paths.append(image_path)
 
@@ -66,7 +68,7 @@ class FoodDataset(Dataset):
         return len(self.image_paths)
 
     def __getitem__(self, idx):
-        img = Image.open(self.image_paths[idx])
+        img = Image.open(self.image_paths[idx]).convert("RGB")
         # Pad square & resize 512
         img = self.basic_transform(img)
 
