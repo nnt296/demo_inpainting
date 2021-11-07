@@ -21,6 +21,8 @@ def zoom_scale(img, pixel_crop):
 
 
 def gen_mask(im_origin: np.ndarray):
+    # This assume generated text is within Center 256x256 crop
+
     rand_mask = random.choice([0, 1])
     if rand_mask:
         logo_s = cv2.imread("asset/mask1.png", cv2.IMREAD_UNCHANGED)
@@ -28,9 +30,9 @@ def gen_mask(im_origin: np.ndarray):
         logo_s = cv2.imread("asset/mask2.png", cv2.IMREAD_UNCHANGED)
 
     # RANDOMIZE MASK
-    pixel_shift_x = np.random.randint(-25, 25)
-    pixel_shift_y = np.random.randint(-25, 25)
-    pixel_zoom_scale = np.random.randint(-15, 15)
+    pixel_shift_x = np.random.randint(-3, 3)
+    pixel_shift_y = np.random.randint(-3, 3)
+    pixel_zoom_scale = np.random.randint(-3, 3)
     pixel_smooth = np.random.randint(200, 400)
     flip_up = np.random.randint(9)
     opacity = np.random.uniform(15, 35) / 100

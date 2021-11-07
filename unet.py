@@ -83,10 +83,14 @@ class Unet(pl.LightningModule):
         # Keep track of last loss
         self.last_loss = float("inf")
 
-        train_ds = FoodDataset(img_dir=os.path.join(self.h_params.dataset, "images"),
-                               im_names_path=os.path.join(self.h_params.dataset, "meta", "meta", "train.txt"))
-        self.num_samples = len(train_ds)
+        self.train_ds = FoodDataset(img_dir=os.path.join(self.h_params.dataset, "images"),
+                                    im_names_path=os.path.join(self.h_params.dataset, "meta", "meta", "train.txt"))
+        self.num_samples = len(self.train_ds)
         self.train_iters_per_epoch = self.num_samples // self.h_params.batch_size
+
+        self.val_ds = FoodDataset(img_dir=os.path.join(self.h_params.dataset, "images"),
+                                  im_names_path=os.path.join(self.h_params.dataset, "meta", "meta", "test.txt"))
+        self.viz_iters = min(len(self.val_ds), self.h_params.viz_iters)
 
     def forward(self, x):
         x1 = self.inc(x)
@@ -108,7 +112,7 @@ class Unet(pl.LightningModule):
         b_generated_im = self(b_masked_im)
 
         loss = self.mse_mean(b_generated_im, b_raw_im)
-        # loss = loss / b_num_pixels
+        loss = loss / b_num_pixels
 
         return loss, b_generated_im
 
@@ -121,9 +125,9 @@ class Unet(pl.LightningModule):
         loss, b_generated_im = self.shared_step(batch)
 
         # Random save image to view log
-        if batch_nb == 0:
+        if batch_nb % self.viz_iters == 0:
             b_raw_im, b_masked_im, _ = batch
-            save_path = os.path.join(self.h_params.log_dir, f"output_epoch{self.current_epoch:03d}.png")
+            save_path = os.path.join(self.h_params.log_dir, f"output_epoch{self.current_epoch:03d}_batch{batch_nb}.png")
             save_infer_sample(b_raw_im, b_masked_im, b_generated_im, save_path)
 
         self.log("val_loss", loss, on_step=False, on_epoch=True)
@@ -148,11 +152,8 @@ class Unet(pl.LightningModule):
         return [optimizer], [scheduler]
 
     def train_dataloader(self):
-        train_ds = FoodDataset(img_dir=os.path.join(self.h_params.dataset, "images"),
-                               im_names_path=os.path.join(self.h_params.dataset, "meta", "meta", "train.txt"))
-
         train_loader = DataLoader(
-            train_ds,
+            self.train_ds,
             num_workers=self.h_params.num_workers,
             batch_size=self.h_params.batch_size,
             shuffle=True,
@@ -161,11 +162,8 @@ class Unet(pl.LightningModule):
         return train_loader
 
     def val_dataloader(self):
-        val_ds = FoodDataset(img_dir=os.path.join(self.h_params.dataset, "images"),
-                             im_names_path=os.path.join(self.h_params.dataset, "meta", "meta", "test.txt"))
-
         val_loader = DataLoader(
-            val_ds,
+            self.val_ds,
             num_workers=self.h_params.num_workers,
             batch_size=self.h_params.batch_size,
             shuffle=False,
@@ -192,6 +190,7 @@ class Unet(pl.LightningModule):
         parser.add_argument('--warmup_epochs', type=int, default=1)
         parser.add_argument('--reduction_point', type=float, default=0.05)
         parser.add_argument('--weight_decay', type=float, default=1e-6)
+        parser.add_argument('--viz_iters', type=int, default=500)
         parser.add_argument('--num_workers', type=int, default=4)
         parser.add_argument('--batch_size', type=int, default=4)
         parser.add_argument('--learning_rate', type=float, default=1e-4)

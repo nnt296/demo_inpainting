@@ -47,6 +47,7 @@ class FoodDataset(Dataset):
         self.flip = transforms.RandomHorizontalFlip(p=1.1)
 
         self.transform = transforms.Compose([
+            transforms.CenterCrop(256),
             transforms.ToTensor(),
             transforms.Normalize(
                 mean=[0.5, 0.5, 0.5],
