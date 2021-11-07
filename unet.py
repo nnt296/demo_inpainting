@@ -191,10 +191,10 @@ class Unet(pl.LightningModule):
         parser.add_argument('--max_epochs', type=int, default=50)
         parser.add_argument('--warmup_epochs', type=int, default=1)
         parser.add_argument('--reduction_point', type=float, default=0.05)
-        parser.add_argument('--weight_decay', type=int, default=1e-6)
+        parser.add_argument('--weight_decay', type=float, default=1e-6)
         parser.add_argument('--num_workers', type=int, default=4)
         parser.add_argument('--batch_size', type=int, default=4)
-        parser.add_argument('--learning_rate', type=int, default=1e-4)
+        parser.add_argument('--learning_rate', type=float, default=1e-4)
         return parser
 
 
