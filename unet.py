@@ -111,8 +111,11 @@ class Unet(pl.LightningModule):
         # get h representations, bolts resnet returns a list
         b_generated_im = self(b_masked_im)
 
-        loss = self.mse_mean(b_generated_im, b_raw_im)
+        loss = self.mse_none(b_generated_im, b_raw_im)
+        loss = loss.reshape(loss.size(0), -1)
+        loss = torch.sum(loss, dim=-1)
         loss = loss / b_num_pixels
+        loss = torch.mean(loss)
 
         return loss, b_generated_im
 
