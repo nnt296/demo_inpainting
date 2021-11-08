@@ -23,11 +23,10 @@ def main(h_params):
         max_epochs=h_params.max_epochs,
         gpus=1,
         callbacks=callbacks,
-        num_nodes=1,
-        ckpt_path=ckpt_path
+        num_nodes=1
     )
 
-    trainer.fit(model)
+    trainer.fit(model, ckpt_path=ckpt_path)
 
 
 if __name__ == '__main__':

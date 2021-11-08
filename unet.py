@@ -58,6 +58,8 @@ class Up(nn.Module):
 
 class Unet(pl.LightningModule):
     def __init__(self, h_params):
+        # TODO, use variables instead of h_params, so that Trainer can save hyper-params to files
+
         super(Unet, self).__init__()
         self.h_params = h_params
 
@@ -116,6 +118,9 @@ class Unet(pl.LightningModule):
         loss = torch.sum(loss, dim=-1)
         loss = loss / b_num_pixels
         loss = torch.mean(loss)
+
+        # TODO: add more weight to masked pixels
+        # https://stackoverflow.com/questions/61580037/mseloss-when-mask-is-used
 
         return loss, b_generated_im
 
