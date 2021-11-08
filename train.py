@@ -9,7 +9,7 @@ from pytorch_lightning.callbacks import ModelCheckpoint, LearningRateMonitor
 
 
 def main(h_params):
-    model = Unet(h_params)
+    model = Unet(**h_params.__dict__)
 
     os.makedirs(h_params.log_dir, exist_ok=True)
 
@@ -23,6 +23,7 @@ def main(h_params):
         max_epochs=h_params.max_epochs,
         gpus=1,
         callbacks=callbacks,
+        log_every_n_steps=h_params.log_steps,
         num_nodes=1
     )
 
@@ -36,6 +37,7 @@ if __name__ == '__main__':
     parent_parser = ArgumentParser(add_help=False)
     parent_parser.add_argument('--dataset', required=True)
     parent_parser.add_argument('--log_dir', default='lightning_logs')
+    parent_parser.add_argument('--log_steps', type=int, default=30)
 
     parser = Unet.add_model_specific_args(parent_parser)
     params = parser.parse_args()

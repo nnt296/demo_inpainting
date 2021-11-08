@@ -57,51 +57,78 @@ class Up(nn.Module):
 
 
 class Unet(pl.LightningModule):
-    def __init__(self, h_params):
+    def __init__(
+            self,
+            dataset: str,
+            n_channels: int = 3,
+            n_classes: int = 3,
+            bilinear: bool = False,
+
+            learning_rate: float = 1e-3,
+            batch_size: int = 4,
+            log_dir: str = "lightning_logs",
+            weight_decay: float = 1e-5,
+            warmup_epochs: int = 1,
+            max_epochs: int = 50,
+            num_workers: int = 4,
+            viz_iters: int = 100,
+            **kwargs
+    ):
         # TODO, use variables instead of h_params, so that Trainer can save hyper-params to files
 
         super(Unet, self).__init__()
-        self.h_params = h_params
+        self.dataset_dir = dataset
 
-        self.n_channels = h_params.n_channels
-        self.n_classes = h_params.n_classes
-        self.bilinear = True
-
-        # Do not do reduction
-        self.mse_mean = torch.nn.MSELoss(reduction="mean")
-        self.mse_none = torch.nn.MSELoss(reduction="none")
+        # Model params
+        self.n_channels = n_channels
+        self.n_classes = n_classes
+        self.bilinear = bilinear
 
         self.inc = double_conv(self.n_channels, 64)
         self.down1 = down(64, 128)
         self.down2 = down(128, 256)
+        self.dropout1 = nn.Dropout(p=0.2)
         self.down3 = down(256, 512)
         self.down4 = down(512, 512)
-        self.up1 = Up(1024, 256)
-        self.up2 = Up(512, 128)
-        self.up3 = Up(256, 64)
-        self.up4 = Up(128, 64)
+        self.up1 = Up(1024, 256, bilinear=self.bilinear)
+        self.up2 = Up(512, 128, bilinear=self.bilinear)
+        self.dropout2 = nn.Dropout(p=0.2)
+        self.up3 = Up(256, 64, bilinear=self.bilinear)
+        self.up4 = Up(128, 64, bilinear=self.bilinear)
         self.out = nn.Conv2d(64, self.n_classes, kernel_size=(1, 1))
 
-        # Keep track of last loss
-        self.last_loss = float("inf")
+        # Dataset and Loss
+        self.mse_mean = torch.nn.MSELoss(reduction="mean")
+        self.mse_none = torch.nn.MSELoss(reduction="none")
 
-        self.train_ds = FoodDataset(img_dir=os.path.join(self.h_params.dataset, "images"),
-                                    im_names_path=os.path.join(self.h_params.dataset, "meta", "meta", "train.txt"))
+        self.train_ds = FoodDataset(img_dir=os.path.join(self.dataset_dir, "images"),
+                                    im_names_path=os.path.join(self.dataset_dir, "meta", "meta", "train.txt"))
+
+        self.val_ds = FoodDataset(img_dir=os.path.join(self.dataset_dir, "images"),
+                                  im_names_path=os.path.join(self.dataset_dir, "meta", "meta", "test.txt"))
+
+        # Training params
         self.num_samples = len(self.train_ds)
-        self.train_iters_per_epoch = self.num_samples // self.h_params.batch_size
-
-        self.val_ds = FoodDataset(img_dir=os.path.join(self.h_params.dataset, "images"),
-                                  im_names_path=os.path.join(self.h_params.dataset, "meta", "meta", "test.txt"))
-        self.viz_iters = min(len(self.val_ds), self.h_params.viz_iters)
+        self.batch_size = batch_size
+        self.train_iters_per_epoch = self.num_samples // batch_size
+        self.learning_rate = learning_rate
+        self.log_dir = log_dir
+        self.weight_decay = weight_decay
+        self.warmup_epochs = warmup_epochs
+        self.max_epochs = max_epochs
+        self.num_workers = num_workers
+        self.viz_iters = min(len(self.val_ds), viz_iters)
 
     def forward(self, x):
         x1 = self.inc(x)
         x2 = self.down1(x1)
         x3 = self.down2(x2)
+        x3 = self.dropout1(x3)
         x4 = self.down3(x3)
         x5 = self.down4(x4)
         x = self.up1(x5, x4)
         x = self.up2(x, x3)
+        x = self.dropout2(x)
         x = self.up3(x, x2)
         x = self.up4(x, x1)
         return self.out(x)
@@ -135,18 +162,18 @@ class Unet(pl.LightningModule):
         # Random save image to view log
         if batch_nb % self.viz_iters == 0:
             b_raw_im, b_masked_im, _ = batch
-            save_path = os.path.join(self.h_params.log_dir, f"output_epoch{self.current_epoch:03d}_batch{batch_nb}.png")
+            save_path = os.path.join(self.log_dir, f"output_epoch{self.current_epoch:03d}_batch{batch_nb}.png")
             save_infer_sample(b_raw_im, b_masked_im, b_generated_im, save_path)
 
-        self.log("val_loss", loss, on_step=False, on_epoch=True)
+        self.log("val_loss", loss, on_step=True, on_epoch=True)
         return loss
 
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(
-            self.parameters(), lr=self.h_params.learning_rate, weight_decay=self.h_params.weight_decay)
+            self.parameters(), lr=self.learning_rate, weight_decay=self.weight_decay)
 
-        warmup_steps = self.train_iters_per_epoch * self.h_params.warmup_epochs
-        total_steps = self.train_iters_per_epoch * self.h_params.max_epochs
+        warmup_steps = self.train_iters_per_epoch * self.warmup_epochs
+        total_steps = self.train_iters_per_epoch * self.max_epochs
 
         scheduler = {
             "scheduler": torch.optim.lr_scheduler.LambdaLR(
@@ -162,8 +189,8 @@ class Unet(pl.LightningModule):
     def train_dataloader(self):
         train_loader = DataLoader(
             self.train_ds,
-            num_workers=self.h_params.num_workers,
-            batch_size=self.h_params.batch_size,
+            num_workers=self.num_workers,
+            batch_size=self.batch_size,
             shuffle=True,
             drop_last=True
         )
@@ -172,8 +199,8 @@ class Unet(pl.LightningModule):
     def val_dataloader(self):
         val_loader = DataLoader(
             self.val_ds,
-            num_workers=self.h_params.num_workers,
-            batch_size=self.h_params.batch_size,
+            num_workers=self.num_workers,
+            batch_size=self.batch_size,
             shuffle=False,
             drop_last=True
         )
@@ -198,7 +225,7 @@ class Unet(pl.LightningModule):
         parser.add_argument('--max_epochs', type=int, default=50)
         parser.add_argument('--warmup_epochs', type=int, default=1)
         parser.add_argument('--reduction_point', type=float, default=0.05)
-        parser.add_argument('--weight_decay', type=float, default=1e-6)
+        parser.add_argument('--weight_decay', type=float, default=1e-5)
         parser.add_argument('--viz_iters', type=int, default=500)
         parser.add_argument('--num_workers', type=int, default=4)
         parser.add_argument('--batch_size', type=int, default=4)
@@ -210,7 +237,7 @@ if __name__ == '__main__':
     p = ArgumentParser(add_help=False)
     p = Unet.add_model_specific_args(p)
     args = p.parse_args()
-    net = Unet(args)
+    net = Unet(**args.__dict__)
 
     im = torch.rand((2, 3, 512, 512))
     out = net(im)
