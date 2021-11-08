@@ -189,6 +189,7 @@ class Unet(pl.LightningModule):
         parser.add_argument('--n_classes', type=int, default=3)
 
         # Training params
+        parser.add_argument('--resume', type=str, default="")
         parser.add_argument('--max_epochs', type=int, default=50)
         parser.add_argument('--warmup_epochs', type=int, default=1)
         parser.add_argument('--reduction_point', type=float, default=0.05)
