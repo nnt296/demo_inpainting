@@ -74,7 +74,7 @@ class Unet(pl.LightningModule):
             viz_iters: int = 100,
             **kwargs
     ):
-        # TODO, use variables instead of h_params, so that Trainer can save hyper-params to files
+        self.save_hyperparameters()
 
         super(Unet, self).__init__()
         self.dataset_dir = dataset
