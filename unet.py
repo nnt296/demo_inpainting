@@ -201,7 +201,7 @@ class Unet(pl.LightningModule):
             self.val_ds,
             num_workers=self.num_workers,
             batch_size=self.batch_size,
-            shuffle=False,
+            shuffle=True,
             drop_last=True
         )
         return val_loader
