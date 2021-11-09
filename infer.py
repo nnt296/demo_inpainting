@@ -2,7 +2,7 @@ from argparse import ArgumentParser
 
 import numpy as np
 import torch
-from PIL import Image
+from PIL import Image, ImageEnhance
 from torchvision import transforms
 
 from unet import Unet
@@ -11,10 +11,11 @@ from utils import de_normalize_im, thumbnail
 
 def infer(h_params):
     ckpt_path = h_params.resume if len(h_params.resume) > 0 else None
-    model = Unet.load_from_checkpoint(ckpt_path, h_params=h_params)
+    model = Unet.load_from_checkpoint(ckpt_path, **h_params.__dict__)
     model.eval()
 
     im = Image.open(h_params.image).convert("RGB")
+    im = ImageEnhance.Contrast(im).enhance(0.628)
 
     trans = transforms.Compose([
         transforms.CenterCrop(256),

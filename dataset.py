@@ -3,7 +3,7 @@ import cv2
 import random
 
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageEnhance
 
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms
@@ -83,6 +83,8 @@ class FoodDataset(Dataset):
 
         # Convert to PIL
         masked_im = Image.fromarray(masked_im_np)
+        masked_im = ImageEnhance.Contrast(masked_im).enhance(0.628)
+        img = ImageEnhance.Contrast(img).enhance(0.628)
 
         # Training/Test transform
         if random.uniform(0, 1) < 0.5:
