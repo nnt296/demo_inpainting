@@ -135,16 +135,23 @@ class Unet(pl.LightningModule):
 
     def shared_step(self, batch):
         # final image in tuple is for online eval
-        b_raw_im, b_masked_im, b_num_pixels = batch
+        b_raw_im, b_masked_im, b_mask = batch
 
         # get h representations, bolts resnet returns a list
         b_generated_im = self(b_masked_im)
 
         loss = self.mse_none(b_generated_im, b_raw_im)
-        loss = loss.reshape(loss.size(0), -1)
-        loss = torch.sum(loss, dim=-1)
-        loss = loss / b_num_pixels
-        loss = torch.mean(loss)
+        b_mask[b_mask > 0] = b_mask[b_mask > 0] + 0.5
+        loss_mask = (loss * b_mask).sum()
+        mask_elements = b_mask.sum()
+        loss_mask = loss_mask / mask_elements
+
+        b_other = torch.where(b_mask == 0, 1, 0)
+        loss_other = (loss * b_other).sum()
+        non_mask_elements = b_other.sum()
+        loss_other = loss_other / non_mask_elements
+
+        loss = loss_mask + 0.5 * loss_other
 
         # TODO: add more weight to masked pixels
         # https://stackoverflow.com/questions/61580037/mseloss-when-mask-is-used

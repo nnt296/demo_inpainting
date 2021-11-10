@@ -3,6 +3,7 @@ import cv2
 import random
 
 import numpy as np
+import torch
 from PIL import Image, ImageEnhance
 
 from torch.utils.data import Dataset, DataLoader
@@ -45,6 +46,7 @@ class FoodDataset(Dataset):
         ])
 
         self.flip = transforms.RandomHorizontalFlip(p=1.1)
+        self.center_crop = transforms.CenterCrop(256);
 
         self.transform = transforms.Compose([
             transforms.CenterCrop(256),
@@ -76,7 +78,8 @@ class FoodDataset(Dataset):
         im_np = np.array(img)
         # Convert to opencv BGR format
         im_np = cv2.cvtColor(im_np, cv2.COLOR_RGB2BGR)
-        masked_im_np, num_effective_pixels = gen_mask(im_np)
+        masked_im_np, mask = gen_mask(im_np)
+        mask = torch.from_numpy(mask)
 
         # Convert to PIL RGB format
         masked_im_np = cv2.cvtColor(masked_im_np, cv2.COLOR_BGR2RGB)
@@ -90,11 +93,14 @@ class FoodDataset(Dataset):
         if random.uniform(0, 1) < 0.5:
             masked_im = self.flip(masked_im)
             img = self.flip(img)
+            mask = self.flip(mask)
 
         masked_im = self.transform(masked_im)
         img = self.transform(img)
+        mask = self.center_crop(mask)
+        mask = mask.unsqueeze(0)                        # Shape of 1 x 256 x 256
 
-        return img, masked_im, num_effective_pixels
+        return img, masked_im, mask
 
 
 if __name__ == '__main__':

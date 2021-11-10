@@ -2,6 +2,7 @@ import random
 
 import cv2
 import numpy as np
+import torch
 from PIL import Image
 
 
@@ -30,8 +31,8 @@ def gen_mask(im_origin: np.ndarray):
         logo_s = cv2.imread("asset/mask2.png", cv2.IMREAD_UNCHANGED)
 
     # RANDOMIZE MASK
-    pixel_shift_x = np.random.randint(-3, 3)
-    pixel_shift_y = np.random.randint(-3, 3)
+    pixel_shift_x = np.random.randint(-15, 15)
+    pixel_shift_y = np.random.randint(-30, 30)
     pixel_zoom_scale = np.random.randint(-3, 3)
     pixel_smooth = np.random.randint(200, 400)
     flip_up = np.random.randint(9)
@@ -60,15 +61,14 @@ def gen_mask(im_origin: np.ndarray):
     result[:, :, 1] = (1. - alpha) * im_origin[:, :, 1] + alpha * logo_s[:, :, 1]
     result[:, :, 2] = (1. - alpha) * im_origin[:, :, 2] + alpha * logo_s[:, :, 2]
 
-    num_effective_pixel = len(np.where(alpha > 0)[0])
-    return result, num_effective_pixel
+    return result, alpha
 
 
 if __name__ == '__main__':
     src = cv2.imread("asset/image.jpg")
 
     for _ in range(10):
-        res, num_pixels = gen_mask(src)
-        print(f"num_effective_pixel: {num_pixels}")
+        res, mask = gen_mask(src)
+        print("HERE: ", mask.shape)
         cv2.imshow("Result", res)
         cv2.waitKey(0)

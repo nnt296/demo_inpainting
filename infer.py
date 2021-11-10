@@ -34,6 +34,9 @@ def infer(h_params):
     third = np.zeros_like(raw_im)
     image = thumbnail(raw_im, generated_im, third)
     image.save("output/output.png")
+    out = Image.fromarray(generated_im)
+    out = ImageEnhance.Contrast(out).enhance(1/0.628)
+    out.save("output/gen.png")
 
 
 if __name__ == '__main__':
