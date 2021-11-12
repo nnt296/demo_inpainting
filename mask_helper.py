@@ -36,7 +36,7 @@ def gen_mask(im_origin: np.ndarray):
     pixel_zoom_scale = np.random.randint(-3, 3)
     pixel_smooth = np.random.randint(200, 400)
     flip_up = np.random.randint(9)
-    opacity = np.random.uniform(15, 35) / 100
+    opacity = np.random.uniform(5, 30) / 100
     # opacity=1.
 
     if flip_up % 3 != 1:

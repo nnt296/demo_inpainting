@@ -15,7 +15,7 @@ def infer(h_params):
     model.eval()
 
     im = Image.open(h_params.image).convert("RGB")
-    im = ImageEnhance.Contrast(im).enhance(0.628)
+    # im = ImageEnhance.Contrast(im).enhance(0.628)
 
     trans = transforms.Compose([
         transforms.CenterCrop(256),
@@ -35,7 +35,7 @@ def infer(h_params):
     image = thumbnail(raw_im, generated_im, third)
     image.save("output/output.png")
     out = Image.fromarray(generated_im)
-    out = ImageEnhance.Contrast(out).enhance(1/0.628)
+    # out = ImageEnhance.Contrast(out).enhance(1/0.628)
     out.save("output/gen.png")
 
 

@@ -46,7 +46,7 @@ class FoodDataset(Dataset):
         ])
 
         self.flip = transforms.RandomHorizontalFlip(p=1.1)
-        self.center_crop = transforms.CenterCrop(256);
+        self.center_crop = transforms.CenterCrop(256)
 
         self.transform = transforms.Compose([
             transforms.CenterCrop(256),
@@ -86,8 +86,8 @@ class FoodDataset(Dataset):
 
         # Convert to PIL
         masked_im = Image.fromarray(masked_im_np)
-        masked_im = ImageEnhance.Contrast(masked_im).enhance(0.628)
-        img = ImageEnhance.Contrast(img).enhance(0.628)
+        # masked_im = ImageEnhance.Contrast(masked_im).enhance(0.628)
+        # img = ImageEnhance.Contrast(img).enhance(0.628)
 
         # Training/Test transform
         if random.uniform(0, 1) < 0.5:
