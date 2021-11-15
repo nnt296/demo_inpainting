@@ -3,13 +3,17 @@ from argparse import ArgumentParser
 
 import torch
 
+from dataset import FoodDataModule
 from unet import Unet
 from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks import ModelCheckpoint, LearningRateMonitor
 
 
 def main(h_params):
+    dm = FoodDataModule(**h_params.__dict__)
     model = Unet(**h_params.__dict__)
+    model.num_train_samples = dm.num_train_samples
+    model.num_val_samples = dm.num_val_samples
 
     os.makedirs(h_params.log_dir, exist_ok=True)
 
@@ -27,7 +31,7 @@ def main(h_params):
         num_nodes=1
     )
 
-    trainer.fit(model, ckpt_path=ckpt_path)
+    trainer.fit(model, datamodule=dm, ckpt_path=ckpt_path)
 
 
 if __name__ == '__main__':

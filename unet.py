@@ -101,23 +101,18 @@ class Unet(pl.LightningModule):
         self.mse_mean = torch.nn.MSELoss(reduction="mean")
         self.mse_none = torch.nn.MSELoss(reduction="none")
 
-        self.train_ds = FoodDataset(img_dir=os.path.join(self.dataset_dir, "images"),
-                                    im_names_path=os.path.join(self.dataset_dir, "meta", "meta", "train.txt"))
-
-        self.val_ds = FoodDataset(img_dir=os.path.join(self.dataset_dir, "images"),
-                                  im_names_path=os.path.join(self.dataset_dir, "meta", "meta", "test.txt"))
-
         # Training params
-        self.num_samples = len(self.train_ds)
+        self.num_train_samples = kwargs.get("num_samples", 100)
+        self.num_val_samples = kwargs.get("num_val_samples", 100)
         self.batch_size = batch_size
-        self.train_iters_per_epoch = self.num_samples // batch_size
+        self.train_iters_per_epoch = self.num_train_samples // batch_size
         self.learning_rate = learning_rate
         self.log_dir = log_dir
         self.weight_decay = weight_decay
         self.warmup_epochs = warmup_epochs
         self.max_epochs = max_epochs
         self.num_workers = num_workers
-        self.viz_iters = min(len(self.val_ds), viz_iters)
+        self.viz_iters = min(self.num_val_samples, viz_iters)
 
     def forward(self, x):
         x1 = self.inc(x)
@@ -185,32 +180,6 @@ class Unet(pl.LightningModule):
         }
 
         return [optimizer], [scheduler]
-
-    def train_dataloader(self):
-        train_loader = DataLoader(
-            self.train_ds,
-            num_workers=self.num_workers,
-            batch_size=self.batch_size,
-            shuffle=True,
-            drop_last=True
-        )
-        return train_loader
-
-    def val_dataloader(self):
-        val_loader = DataLoader(
-            self.val_ds,
-            num_workers=self.num_workers,
-            batch_size=self.batch_size,
-            shuffle=True,
-            drop_last=True
-        )
-        return val_loader
-
-    def test_dataloader(self) -> EVAL_DATALOADERS:
-        pass
-
-    def predict_dataloader(self) -> EVAL_DATALOADERS:
-        pass
 
     @staticmethod
     def add_model_specific_args(parent_parser):

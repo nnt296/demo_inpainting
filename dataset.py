@@ -4,9 +4,11 @@ import random
 
 import numpy as np
 from PIL import Image, ImageEnhance
+from pytorch_lightning.utilities.types import EVAL_DATALOADERS, TRAIN_DATALOADERS
 
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms
+import pytorch_lightning as pl
 
 from mask_helper import gen_mask
 
@@ -95,6 +97,49 @@ class FoodDataset(Dataset):
         img = self.transform(img)
 
         return img, masked_im, num_effective_pixels
+
+
+class FoodDataModule(pl.LightningDataModule):
+    def __init__(self, dataset: str, batch_size: int, num_workers: int, **kwargs):
+        super(FoodDataModule, self).__init__()
+        self.dataset_dir = dataset
+        self.batch_size = batch_size
+        self.num_workers = num_workers
+
+        self.train_ds = FoodDataset(img_dir=os.path.join(self.dataset_dir, "images"),
+                                    im_names_path=os.path.join(self.dataset_dir, "meta", "meta", "train.txt"))
+
+        self.val_ds = FoodDataset(img_dir=os.path.join(self.dataset_dir, "images"),
+                                  im_names_path=os.path.join(self.dataset_dir, "meta", "meta", "test.txt"))
+
+        self.num_train_samples = len(self.train_ds)
+        self.num_val_samples = len(self.val_ds)
+
+    def train_dataloader(self) -> TRAIN_DATALOADERS:
+        train_loader = DataLoader(
+            self.train_ds,
+            num_workers=self.num_workers,
+            batch_size=self.batch_size,
+            shuffle=True,
+            drop_last=True
+        )
+        return train_loader
+
+    def test_dataloader(self) -> EVAL_DATALOADERS:
+        pass
+
+    def val_dataloader(self) -> EVAL_DATALOADERS:
+        val_loader = DataLoader(
+            self.val_ds,
+            num_workers=self.num_workers,
+            batch_size=self.batch_size,
+            shuffle=True,
+            drop_last=True
+        )
+        return val_loader
+
+    def predict_dataloader(self) -> EVAL_DATALOADERS:
+        pass
 
 
 if __name__ == '__main__':
