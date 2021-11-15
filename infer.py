@@ -37,7 +37,7 @@ def infer(image_path: str, model, de_noise=False, use_cuda: bool = True):
 
     if de_noise:
         cv_im = cv2.cvtColor(generated_im, cv2.COLOR_RGB2BGR)
-        de_noised_im = cv2.fastNlMeansDenoisingColored(cv_im, None, 10, 10, 7, 21)
+        de_noised_im = cv2.fastNlMeansDenoisingColored(cv_im, None, 3, 3, 5, 7)
         generated_im = cv2.cvtColor(de_noised_im, cv2.COLOR_BGR2RGB)
 
     # Enhance generated image
