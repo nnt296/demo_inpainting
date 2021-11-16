@@ -55,7 +55,7 @@ def infer(image_path: str, model, de_noise=False, use_cuda: bool = True):
 
 
 def save_model(h_params, save_for_gpu=True):
-    ckpt_path = h_params.resume if len(h_params.resume) > 0 else None
+    ckpt_path = h_params.resume if len(h_params.resume) > 0 else "epoch.ckpt"
     model = Unet.load_from_checkpoint(ckpt_path, **h_params.__dict__)
     model.eval()
 
