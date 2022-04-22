@@ -36,9 +36,9 @@ def add_logo(im_origin, alpha_0):
     rot_degree = np.random.randint(-180, 180)
     logo_s = rotate_image(logo_s, rot_degree)
     # RANDOMIZE MASK
-    pixel_shift_x = np.random.randint(-256, 256)
-    pixel_shift_y = np.random.randint(-256, 256)
-    pixel_zoom_scale = np.random.randint(-4, 5)
+    pixel_shift_x = np.random.randint(-100, 100)
+    pixel_shift_y = np.random.randint(-100, 100)
+    pixel_zoom_scale = np.random.randint(-3, 4)
     pixel_smooth = np.random.randint(200, 400)
     flip_up = np.random.randint(9)
     opacity = np.random.uniform(5, 50) / 100
