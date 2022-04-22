@@ -23,29 +23,32 @@ def zoom_scale(img, pixel_crop):
     im_pil = im_pil.resize((512, 512), Image.ANTIALIAS)
     return np.asarray(im_pil)
 
+def rotate_image(image, angle):
+    image_center = tuple(np.array(image.shape[1::-1]) / 2)
+    rot_mat = cv2.getRotationMatrix2D(image_center, angle, 1.0)
+    result = cv2.warpAffine(image, rot_mat, image.shape[1::-1], flags=cv2.INTER_LINEAR)
+    return result
 
 def add_logo(im_origin, alpha_0):
     rand_mask = np.random.randint(3)
     
     logo_s=logo_s_list[rand_mask]
+    rot_degree = np.random.randint(-180, 180)
+    logo_s = rotate_image(logo_s, rot_degree)
     # RANDOMIZE MASK
-    pixel_shift_x = np.random.randint(-15, 15)
-    pixel_shift_y = np.random.randint(-30, 30)
-    pixel_zoom_scale = np.random.randint(-3, 3)
+    pixel_shift_x = np.random.randint(-256, 256)
+    pixel_shift_y = np.random.randint(-256, 256)
+    pixel_zoom_scale = np.random.randint(-4, 5)
     pixel_smooth = np.random.randint(200, 400)
     flip_up = np.random.randint(9)
-    opacity = np.random.uniform(5, 25) / 100
+    opacity = np.random.uniform(5, 50) / 100
     # opacity=1.
 
     if flip_up % 3 != 1:
-        for i in range(logo_s.shape[1] - 1, pixel_shift_x, -1):
-            logo_s = np.roll(logo_s, -1, axis=1)
-            logo_s[:, -1] = logo_s[:, 0]
+        logo_s = np.roll(logo_s, pixel_shift_x, axis=1)
 
     if flip_up % 3 != 2:
-        for i in range(logo_s.shape[1] - 1, pixel_shift_y, -1):
-            logo_s = np.roll(logo_s, -1, axis=0)
-            logo_s[:, -1] = logo_s[:, 0]
+        logo_s = np.roll(logo_s, pixel_shift_y, axis=0)
 
     logo_s = smooth_edge(logo_s, pixel_smooth)
     logo_s = zoom_scale(logo_s, pixel_zoom_scale)
@@ -64,7 +67,7 @@ def add_logo(im_origin, alpha_0):
 
 def gen_mask(im_origin: np.ndarray):
     # This assume generated text is within Center 256x256 crop
-    no_logo = np.random.randint(1, 4)
+    no_logo = np.random.randint(1, 6)
     alpha_0=np.zeros((512,512))
     for _ in range(no_logo):
       im_origin,alpha_0=add_logo(im_origin, alpha_0)
