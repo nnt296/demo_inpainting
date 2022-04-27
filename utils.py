@@ -11,7 +11,8 @@ def de_normalize_im(tensor: torch.Tensor) -> np.ndarray:
     std = torch.Tensor([0.5, 0.5, 0.5]).to(tensor.device)
     tensor = tensor * std + mean
     tensor = tensor * 255
-    im_np = tensor.detach().cpu().numpy().astype(np.uint8)
+    im_num_clip = np.clip(tensor.detach().cpu().numpy(), 0, 255)
+    im_np = im_num_clip.astype(np.uint8)
     return im_np
 
 
