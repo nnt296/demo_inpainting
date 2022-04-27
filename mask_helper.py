@@ -4,11 +4,8 @@ import cv2
 import numpy as np
 from PIL import Image
 
-logo_s_list = []
-logo_s_list.append(cv2.imread("asset/mask1.png", cv2.IMREAD_UNCHANGED))
-logo_s_list.append(cv2.imread("asset/mask2.png", cv2.IMREAD_UNCHANGED))
-logo_s_list.append(cv2.imread("asset/mask3.png", cv2.IMREAD_UNCHANGED))
-logo_s_list.append(cv2.imread("asset/mask4.png", cv2.IMREAD_UNCHANGED))
+logo_s_list = [cv2.imread("asset/mask1.png", cv2.IMREAD_UNCHANGED), cv2.imread("asset/mask2.png", cv2.IMREAD_UNCHANGED),
+               cv2.imread("asset/mask3.png", cv2.IMREAD_UNCHANGED), cv2.imread("asset/mask4.png", cv2.IMREAD_UNCHANGED)]
 
 
 def smooth_edge(img, pixel_smooth):
@@ -43,9 +40,9 @@ def add_logo(im_origin, alpha_0):
     pixel_shift_x = np.random.randint(-100, 100)
     pixel_shift_y = np.random.randint(-100, 100)
     pixel_zoom_scale = np.random.randint(-3, 4)
-    pixel_smooth = np.random.randint(200, 400)
+    pixel_smooth = np.random.randint(150, 350)
     shifter = np.random.randint(9)
-    opacity = np.random.uniform(5, 50) / 100
+    opacity = np.random.uniform(5, 80) / 100
     # opacity=1.
 
     if shifter % 3 != 1:
@@ -54,16 +51,16 @@ def add_logo(im_origin, alpha_0):
     if shifter % 3 != 2:
         logo_s = np.roll(logo_s, pixel_shift_y, axis=0)
 
-    logo_s = smooth_edge(logo_s, pixel_smooth)
     logo_s = zoom_scale(logo_s, pixel_zoom_scale)
+    logo_s = smooth_edge(logo_s, pixel_smooth)
     h, w, _ = im_origin.shape
 
     result = np.zeros((h, w, 3), np.uint8)
     alpha = logo_s[:, :, 3] / 255.0
-
     alpha *= opacity
-    blur_kernel = np.random.randint(0, 3)
-    alpha = cv2.blur(alpha, (blur_kernel * 2 + 1, blur_kernel * 2 + 1))
+    # blur_kernel = np.random.randint(0, 3)
+    # alpha = cv2.blur(alpha, (blur_kernel * 2 + 1, blur_kernel * 2 + 1))
+    # print("test 3: ", len(np.where(alpha > 0)[0]))
     alpha_0 += alpha
 
     result[:, :, 0] = (1. - alpha) * im_origin[:, :, 0] + alpha * logo_s[:, :, 0]
