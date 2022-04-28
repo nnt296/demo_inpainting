@@ -5,7 +5,9 @@ import numpy as np
 from PIL import Image
 
 logo_s_list = [cv2.imread("asset/mask1.png", cv2.IMREAD_UNCHANGED), cv2.imread("asset/mask2.png", cv2.IMREAD_UNCHANGED),
-               cv2.imread("asset/mask3.png", cv2.IMREAD_UNCHANGED), cv2.imread("asset/mask4.png", cv2.IMREAD_UNCHANGED)]
+               cv2.imread("asset/mask3.png", cv2.IMREAD_UNCHANGED), cv2.imread("asset/mask4.png", cv2.IMREAD_UNCHANGED),
+               cv2.imread("asset/mask5.png", cv2.IMREAD_UNCHANGED)
+               ]
 
 
 def smooth_edge(img, pixel_smooth):
@@ -42,8 +44,12 @@ def add_logo(im_origin, alpha_0):
     pixel_zoom_scale = np.random.randint(-3, 4)
     pixel_smooth = np.random.randint(150, 350)
     shifter = np.random.randint(9)
-    opacity = np.random.uniform(5, 80) / 100
-    # opacity=1.
+    if rand_mask < 3:
+        opacity = np.random.uniform(5, 60) / 100
+    else:
+        opacity = np.random.uniform(60, 120) / 100
+        if opacity > 1:
+            opacity = 1
 
     if shifter % 3 != 1:
         logo_s = np.roll(logo_s, pixel_shift_x, axis=1)
